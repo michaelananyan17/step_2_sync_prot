@@ -218,7 +218,9 @@
         const appState = {
             currentStep: 2,
             selectedTopicIds: [],
-            currentCategory: 'Current Events'
+            currentCategory: 'Current Events',
+            isScrolling: false,
+            scrollTimeout: null
         };
 
         const CATEGORIES = [
@@ -346,7 +348,13 @@
 
         // FIXED: Handle category clicks
         function handleCategoryClick(category) {
+            appState.isScrolling = true;
             scrollToCategory(category);
+            
+            // Reset the scrolling flag after a delay
+            setTimeout(() => {
+                appState.isScrolling = false;
+            }, 1000);
         }
 
         // FIXED: Scroll to specific category
@@ -433,6 +441,9 @@
             // Create new observer with proper configuration
             intersectionObserver = new IntersectionObserver(
                 (entries) => {
+                    // Only update if not programmatically scrolling
+                    if (appState.isScrolling) return;
+                    
                     let mostVisibleEntry = null;
                     let highestRatio = 0;
 
@@ -445,7 +456,7 @@
                     });
 
                     // Update active category if we found a visible one
-                    if (mostVisibleEntry && highestRatio > 0.3) {
+                    if (mostVisibleEntry && highestRatio > 0.1) {
                         const categoryId = mostVisibleEntry.target.id.replace('category-', '').replace(/-/g, ' ');
                         if (categoryId !== appState.currentCategory) {
                             setActiveCategory(categoryId, false);
@@ -454,7 +465,7 @@
                 },
                 {
                     root: topicsContainer,
-                    rootMargin: '-20% 0px -60% 0px', // Adjusted margins for better tracking
+                    rootMargin: '-10% 0px -40% 0px', // Adjusted margins for better tracking
                     threshold: [0, 0.1, 0.3, 0.5, 0.7, 1]
                 }
             );
@@ -463,6 +474,59 @@
             document.querySelectorAll('.topic-category').forEach(section => {
                 intersectionObserver.observe(section);
             });
+
+            // Add scroll event listener for additional tracking
+            topicsContainer.addEventListener('scroll', handleTopicsScroll);
+        }
+
+        // Handle scroll events on topics container
+        function handleTopicsScroll() {
+            // Clear any existing timeout
+            if (appState.scrollTimeout) {
+                clearTimeout(appState.scrollTimeout);
+            }
+            
+            // Set a new timeout to detect when scrolling stops
+            appState.scrollTimeout = setTimeout(() => {
+                // If not programmatically scrolling, update active category based on scroll position
+                if (!appState.isScrolling) {
+                    updateActiveCategoryFromScroll();
+                }
+            }, 150);
+        }
+
+        // Update active category based on scroll position
+        function updateActiveCategoryFromScroll() {
+            const topicsContainer = getElement('topics-scroll-container');
+            const categorySections = document.querySelectorAll('.topic-category');
+            
+            if (!topicsContainer || categorySections.length === 0) return;
+            
+            const containerRect = topicsContainer.getBoundingClientRect();
+            const containerCenter = containerRect.top + (containerRect.height / 2);
+            
+            let closestSection = null;
+            let closestDistance = Infinity;
+            
+            // Find the category section closest to the center of the container
+            categorySections.forEach(section => {
+                const sectionRect = section.getBoundingClientRect();
+                const sectionCenter = sectionRect.top + (sectionRect.height / 2);
+                const distance = Math.abs(sectionCenter - containerCenter);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestSection = section;
+                }
+            });
+            
+            // Update active category if we found a section
+            if (closestSection) {
+                const categoryId = closestSection.id.replace('category-', '').replace(/-/g, ' ');
+                if (categoryId !== appState.currentCategory) {
+                    setActiveCategory(categoryId, false);
+                }
+            }
         }
 
         // FIXED: Render topic categories
