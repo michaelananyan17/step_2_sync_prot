@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PELE - Personalized English Learning Experience</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        
+        .app-container {
+            background-color: #ffffff;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            width: 100%;
+            border-radius: 1rem;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Step 2 Layout */
+        .step-2-container {
+            display: flex;
+            height: 500px;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .topics-section {
+            flex: 0 0 80%;
+            overflow-y: auto;
+            padding-right: 1rem;
+            position: relative;
+        }
+        
+        .category-section {
+            flex: 0 0 20%;
+            border-left: 1px solid #e5e7eb;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .category-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        
+        .category-item {
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+            font-size: 0.875rem;
+        }
+        
+        .category-highlighter {
+            position: absolute;
+            background-color: #4f46e5;
+            border-radius: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 0;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+        }
+        
+        .category-item.active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        .topic-category {
+            min-height: 100%;
+            padding: 2rem 0;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        
+        .topic-category.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .topic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .card-topic {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            text-align: center;
+            padding: 1.5rem;
+            min-height: 120px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            user-select: none;
+            border: 3px solid transparent;
+            background-color: #ffffff;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem;
+            position: relative;
+        }
+        
+        .card-topic:hover {
+            box-shadow: 0 5px 20px rgba(79, 70, 229, 0.2);
+        }
+        
+        .card-topic.selected {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+            box-shadow: 0 5px 20px rgba(79, 70, 229, 0.3);
+        }
+        
+        .priority-number {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 24px;
+            height: 24px;
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div id="app-container" class="app-container">
+        <!-- Header and progress bar -->
+        <div id="header-section" class="mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-2 text-center">PELE Assignment Generator</h1>
+            <p class="text-gray-500 text-center">Powered by OpenAI</p>
+        </div>
+
+        <div class="mb-8">
+            <div class="relative pt-1">
+                <div class="flex mb-2 items-center justify-between">
+                    <div class="text-right">
+                        <span id="progress-text" class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-600 bg-indigo-200">
+                            Step 1: Get Started
+                        </span>
+                    </div>
+                </div>
+                <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-indigo-200">
+                    <div id="progress-bar" style="width: 25%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-indigo-600 transition-all duration-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2 Content -->
+        <div id="step-2" class="step-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Step 2: Choose Your Topic</h2>
+            </div>
+
+            <p class="text-gray-600 mb-4">Select <strong>1 or 2 topics</strong>. The order of selection determines the priority for content generation.</p>
+
+            <p id="selected-topics-indicator" class="text-sm font-medium text-gray-700 mb-6">Selected Topics (Priority Order): None</p>
+
+            <!-- UPDATED LAYOUT FOR STEP 2 -->
+            <div class="step-2-container">
+                <!-- Topics Section (80%) -->
+                <div class="topics-section" id="topics-scroll-container">
+                    <!-- Categories will be populated by JavaScript -->
+                </div>
+                
+                <!-- Category Section (20%) - Made thinner -->
+                <div class="category-section">
+                    <div class="category-highlighter" id="category-highlighter"></div>
+                    <div class="category-scroll-container" id="category-list">
+                        <!-- Categories will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-2-footer mt-8">
+                <button id="step-2-next" class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 ease-in-out">
+                    Next: Assignment Type →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================================================================
+        // GLOBAL STATE
+        // =====================================================================================================
+
+        const appState = {
+            currentStep: 2,
+            selectedTopicIds: [],
+            currentCategory: 'Current Events'
+        };
+
+        const CATEGORIES = [
+            'Current Events',
+            'Economy & Business',
+            'Science & Technology',
+            'World History',
+            'Media & Entertainment',
+            'Style & Fashion',
+            'Art & Theatre',
+            'English Literature',
+            'Geography & Nature',
+            'Cats & Dogs'
+        ];
+
+        const TOPIC_POOL_DATA = [
+            // Current Events
+            { id: 1, name: 'Global Politics', icon: '🌐', category: 'Current Events' },
+            { id: 2, name: 'Environmental News', icon: '🌍', category: 'Current Events' },
+            { id: 3, name: 'Technology Trends', icon: '📱', category: 'Current Events' },
+            { id: 4, name: 'Social Movements', icon: '✊', category: 'Current Events' },
+            { id: 5, name: 'Economic Updates', icon: '💹', category: 'Current Events' },
+
+            // Economy & Business
+            { id: 6, name: 'Marketing 101', icon: '📈', category: 'Economy & Business' },
+            { id: 7, name: 'Start-up Culture', icon: '💡', category: 'Economy & Business' },
+            { id: 8, name: 'Corporate Ethics', icon: '🤝', category: 'Economy & Business' },
+            { id: 9, name: 'Supply and Demand', icon: '📉', category: 'Economy & Business' },
+            { id: 10, name: 'Global Trade', icon: '🌐', category: 'Economy & Business' },
+
+            // Science & Technology
+            { id: 14, name: 'AI & ML', icon: '🤖', category: 'Science & Technology' },
+            { id: 15, name: 'Quantum Physics', icon: '⚛️', category: 'Science & Technology' },
+            { id: 16, name: 'Biotechnology', icon: '🧬', category: 'Science & Technology' },
+            { id: 17, name: 'Cybersecurity', icon: '🔒', category: 'Science & Technology' },
+            { id: 18, name: 'Renewable Energy', icon: '💡', category: 'Science & Technology' },
+
+            // World History
+            { id: 22, name: 'The Roman Empire', icon: '🏛️', category: 'World History' },
+            { id: 23, name: 'Ancient Egypt', icon: '☥', category: 'World History' },
+            { id: 24, name: 'World Wars', icon: '⚔️', category: 'World History' },
+            { id: 25, name: 'Economic History', icon: '💰', category: 'World History' },
+            { id: 26, name: 'Philosophy', icon: '🧠', category: 'World History' },
+
+            // Media & Entertainment
+            { id: 30, name: 'Music Theory', icon: '🎵', category: 'Media & Entertainment' },
+            { id: 31, name: 'History of Jazz', icon: '🎷', category: 'Media & Entertainment' },
+            { id: 32, name: 'Modern Pop Culture', icon: '🎤', category: 'Media & Entertainment' },
+            { id: 33, name: 'Film Noir', icon: '🎬', category: 'Media & Entertainment' },
+            { id: 34, name: 'Special Effects (CGI)', icon: '💥', category: 'Media & Entertainment' },
+
+            // Style & Fashion
+            { id: 40, name: 'Sustainable Fashion', icon: '♻️', category: 'Style & Fashion' },
+            { id: 41, name: 'Fashion History', icon: '👗', category: 'Style & Fashion' },
+            { id: 42, name: 'Haute Couture', icon: '👠', category: 'Style & Fashion' },
+            { id: 43, name: 'Street Style', icon: '👕', category: 'Style & Fashion' },
+            { id: 44, name: 'Fashion Design', icon: '📐', category: 'Style & Fashion' },
+
+            // Art & Theatre
+            { id: 45, name: 'Renaissance Art', icon: '🎨', category: 'Art & Theatre' },
+            { id: 46, name: 'Modern Theatre', icon: '🎭', category: 'Art & Theatre' },
+            { id: 47, name: 'Sculpture', icon: '🗿', category: 'Art & Theatre' },
+            { id: 48, name: 'Performance Art', icon: '💃', category: 'Art & Theatre' },
+            { id: 49, name: 'Art History', icon: '📜', category: 'Art & Theatre' },
+
+            // English Literature
+            { id: 50, name: 'Shakespeare', icon: '🎭', category: 'English Literature' },
+            { id: 51, name: 'Poetry Analysis', icon: '📜', category: 'English Literature' },
+            { id: 52, name: 'Modern Novels', icon: '📖', category: 'English Literature' },
+            { id: 53, name: 'Literary Criticism', icon: '✍️', category: 'English Literature' },
+            { id: 54, name: 'Classic Literature', icon: '🏛️', category: 'English Literature' },
+
+            // Geography & Nature
+            { id: 55, name: 'Climate Change', icon: '🌍', category: 'Geography & Nature' },
+            { id: 56, name: 'Volcanoes', icon: '🌋', category: 'Geography & Nature' },
+            { id: 57, name: 'Major River Systems', icon: '🏞️', category: 'Geography & Nature' },
+            { id: 58, name: 'Urban Planning', icon: '🏙️', category: 'Geography & Nature' },
+            { id: 59, name: 'Natural Resources', icon: '🌿', category: 'Geography & Nature' },
+
+            // Cats & Dogs
+            { id: 62, name: 'Cat Behavior', icon: '🐱', category: 'Cats & Dogs' },
+            { id: 63, name: 'Dog Training', icon: '🐶', category: 'Cats & Dogs' },
+            { id: 64, name: 'Pet Nutrition', icon: '🥩', category: 'Cats & Dogs' },
+            { id: 65, name: 'Animal Welfare', icon: '❤️', category: 'Cats & Dogs' },
+            { id: 66, name: 'Veterinary Science', icon: '🐾', category: 'Cats & Dogs' }
+        ];
+
+        // =====================================================================================================
+        // CORE FUNCTIONALITY - FIXED IMPLEMENTATION
+        // =====================================================================================================
+
+        let intersectionObserver = null;
+
+        function getElement(id) {
+            return document.getElementById(id);
+        }
+
+        // FIXED: Initialize the category tracking system
+        function initializeCategorySystem() {
+            renderCategorySidebar();
+            renderTopicCategories();
+            initializeScrollTracking();
+            setActiveCategory('Current Events', true);
+        }
+
+        // FIXED: Render category sidebar with proper click handlers
+        function renderCategorySidebar() {
+            const categoryContainer = getElement('category-list');
+            if (!categoryContainer) return;
+
+            categoryContainer.innerHTML = CATEGORIES.map(category => {
+                const isActive = category === appState.currentCategory;
+                return `
+                    <div class="category-item ${isActive ? 'active' : ''}" 
+                         data-category="${category}"
+                         onclick="handleCategoryClick('${category}')">
+                        ${category}
+                    </div>
+                `;
+            }).join('');
+
+            // Update highlighter position after rendering
+            setTimeout(updateCategoryHighlighter, 100);
+        }
+
+        // FIXED: Handle category clicks
+        function handleCategoryClick(category) {
+            scrollToCategory(category);
+        }
+
+        // FIXED: Scroll to specific category
+        function scrollToCategory(category) {
+            const categoryElement = getElement(`category-${category.replace(/\s+/g, '-')}`);
+            if (categoryElement) {
+                const topicsContainer = getElement('topics-scroll-container');
+                const containerRect = topicsContainer.getBoundingClientRect();
+                const elementRect = categoryElement.getBoundingClientRect();
+                
+                // Calculate scroll position to center the category
+                const scrollTop = categoryElement.offsetTop - (containerRect.height / 2) + (elementRect.height / 2);
+                
+                topicsContainer.scrollTo({
+                    top: scrollTop,
+                    behavior: 'smooth'
+                });
+                
+                setActiveCategory(category, false);
+            }
+        }
+
+        // FIXED: Set active category and update UI
+        function setActiveCategory(category, updateScroll = false) {
+            if (appState.currentCategory === category) return;
+            
+            appState.currentCategory = category;
+            
+            // Update category items
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const activeCategoryItem = document.querySelector(`[data-category="${category}"]`);
+            if (activeCategoryItem) {
+                activeCategoryItem.classList.add('active');
+            }
+            
+            // Update topic sections
+            document.querySelectorAll('.topic-category').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            const activeSection = getElement(`category-${category.replace(/\s+/g, '-')}`);
+            if (activeSection) {
+                activeSection.classList.add('active');
+            }
+            
+            // Update highlighter
+            updateCategoryHighlighter();
+            
+            // Scroll to category if requested
+            if (updateScroll) {
+                scrollToCategory(category);
+            }
+        }
+
+        // FIXED: Update category highlighter position
+        function updateCategoryHighlighter() {
+            const highlighter = getElement('category-highlighter');
+            const activeCategoryItem = document.querySelector('.category-item.active');
+            
+            if (highlighter && activeCategoryItem) {
+                const itemRect = activeCategoryItem.getBoundingClientRect();
+                const containerRect = activeCategoryItem.parentElement.getBoundingClientRect();
+                
+                highlighter.style.width = `${itemRect.width}px`;
+                highlighter.style.height = `${itemRect.height}px`;
+                highlighter.style.top = `${itemRect.top - containerRect.top}px`;
+                highlighter.style.left = `${itemRect.left - containerRect.left}px`;
+            }
+        }
+
+        // FIXED: Initialize scroll tracking with Intersection Observer
+        function initializeScrollTracking() {
+            const topicsContainer = getElement('topics-scroll-container');
+            if (!topicsContainer) return;
+
+            // Clean up existing observer
+            if (intersectionObserver) {
+                intersectionObserver.disconnect();
+            }
+
+            // Create new observer with proper configuration
+            intersectionObserver = new IntersectionObserver(
+                (entries) => {
+                    let mostVisibleEntry = null;
+                    let highestRatio = 0;
+
+                    // Find the category with the highest visibility ratio
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && entry.intersectionRatio > highestRatio) {
+                            highestRatio = entry.intersectionRatio;
+                            mostVisibleEntry = entry;
+                        }
+                    });
+
+                    // Update active category if we found a visible one
+                    if (mostVisibleEntry && highestRatio > 0.3) {
+                        const categoryId = mostVisibleEntry.target.id.replace('category-', '').replace(/-/g, ' ');
+                        if (categoryId !== appState.currentCategory) {
+                            setActiveCategory(categoryId, false);
+                        }
+                    }
+                },
+                {
+                    root: topicsContainer,
+                    rootMargin: '-20% 0px -60% 0px', // Adjusted margins for better tracking
+                    threshold: [0, 0.1, 0.3, 0.5, 0.7, 1]
+                }
+            );
+
+            // Observe all category sections
+            document.querySelectorAll('.topic-category').forEach(section => {
+                intersectionObserver.observe(section);
+            });
+        }
+
+        // FIXED: Render topic categories
+        function renderTopicCategories() {
+            const topicsContainer = getElement('topics-scroll-container');
+            if (!topicsContainer) return;
+
+            topicsContainer.innerHTML = CATEGORIES.map(category => {
+                const categoryTopics = TOPIC_POOL_DATA.filter(t => t.category === category);
+                const isActive = category === appState.currentCategory;
+                
+                return `
+                    <div class="topic-category ${isActive ? 'active' : ''}" id="category-${category.replace(/\s+/g, '-')}">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-6">${category}</h3>
+                        <div class="topic-grid">
+                            ${categoryTopics.map(topic => {
+                                const isSelected = appState.selectedTopicIds.includes(topic.id);
+                                return `
+                                    <div id="topic-${topic.id}" class="card-topic ${isSelected ? 'selected' : ''}" 
+                                         onclick="toggleTopicSelection(${topic.id})">
+                                        <span class="text-4xl mb-3">${topic.icon}</span>
+                                        <h4 class="font-semibold text-gray-800 text-lg">${topic.name}</h4>
+                                        ${isSelected ? `<div class="priority-number">${appState.selectedTopicIds.indexOf(topic.id) + 1}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Topic selection functionality
+        function toggleTopicSelection(id) {
+            const index = appState.selectedTopicIds.indexOf(id);
+
+            if (index > -1) {
+                // Deselect topic
+                appState.selectedTopicIds.splice(index, 1);
+                const cardElement = getElement(`topic-${id}`);
+                if (cardElement) {
+                    cardElement.classList.remove('selected');
+                    const priorityNum = cardElement.querySelector('.priority-number');
+                    if (priorityNum) priorityNum.remove();
+                }
+            } else {
+                // Select topic (max 2)
+                if (appState.selectedTopicIds.length >= 2) {
+                    return;
+                }
+                appState.selectedTopicIds.push(id);
+                const cardElement = getElement(`topic-${id}`);
+                if (cardElement) {
+                    cardElement.classList.add('selected');
+                }
+            }
+
+            updateTopicSelectionVisuals();
+            renderPriorityNumbers();
+        }
+
+        function updateTopicSelectionVisuals() {
+            const topicNames = appState.selectedTopicIds.map(id => {
+                const topic = TOPIC_POOL_DATA.find(t => t.id === id);
+                return topic ? topic.name : '';
+            }).filter(Boolean);
+
+            const indicatorText = topicNames.length > 0 
+                ? topicNames.map((name, index) => `#${index + 1} <strong>${name}</strong>`).join(' | ')
+                : 'None';
+
+            getElement('selected-topics-indicator').innerHTML = `Selected Topics (Priority Order): ${indicatorText}`;
+        }
+
+        function renderPriorityNumbers() {
+            // Remove all existing priority numbers
+            document.querySelectorAll('.priority-number').forEach(el => el.remove());
+
+            // Add priority numbers to selected topics
+            appState.selectedTopicIds.forEach((id, index) => {
+                const cardElement = getElement(`topic-${id}`);
+                if (cardElement) {
+                    const priorityNum = document.createElement('div');
+                    priorityNum.className = 'priority-number';
+                    priorityNum.textContent = index + 1;
+                    cardElement.appendChild(priorityNum);
+                }
+            });
+        }
+
+        // =====================================================================================================
+        // INITIALIZATION
+        // =====================================================================================================
+
+        function init() {
+            // Initialize the category system
+            initializeCategorySystem();
+            
+            // Set up resize listener for highlighter updates
+            window.addEventListener('resize', updateCategoryHighlighter);
+            
+            // Set up next button
+            getElement('step-2-next').addEventListener('click', () => {
+                alert('Proceeding to next step with selected topics: ' + appState.selectedTopicIds.join(', '));
+            });
+        }
+
+        // Start the application when DOM is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
